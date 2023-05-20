@@ -2,107 +2,153 @@
 // for details on configuring this project to bundle and minify static web assets.
 
 // Write your JavaScript code.
-init();
-const pre = document.querySelector('pre');
+
 
 function init() {
-    document.getElementById("btn-search").onclick = async function () { search() };
-    document.getElementById("btn-open-file").onclick = function () { openFileInDirectory() };
-    
+    //document.getElementById("btn-search").onclick = async function () { search() };
+    //document.getElementById("btn-open-file").onclick = function () { openFileInDirectory() };
+    resizableGrid(document.getElementById("movie-table"));
     callDataDefault();
-}
-
-async function openFileInDirectory() {
-    console.log("open file");
-    const filesInDirectory = await openDirectory();
-    if (!filesInDirectory) {
-        return;
-    }
-    return filesInDirectory;
 }
 
 function search() {
     console.log("search");
 }
 
+function PlayMusicClicked() {
+    var sFileName = "F:/200GANA-1996";
+    if (sFileName.length > 3) {
+        var oFrame = document.getElementById("MusicFrame");
+        if (!oFrame) {
+            oFrame = document.createElement("iframe");
+            oFrame.id = "MusicFrame";
+            oFrame.style.display = "none";
+            document.body.appendChild(oFrame);
+        }
+        oFrame.src = sFileName;
+    }
+}
+
+function processOption(event) {
+    switch (event.target.value) {
+        case "none":
+            // code block
+            break;
+        case "open":
+            // code block
+            PlayMusicClicked();
+         
+            break;
+        case "edit":
+            // code block
+            break;
+        case "select":
+            // code block
+            break;
+        case "delete":
+            // code block
+            break;
+        default:
+        // code block
+    }
+
+}
+
 function callDataDefault() {
 
 }
 
-const openDirectory = async (mode = "read") => {
-    // Feature detection. The API needs to be supported
-    // and the app not run in an iframe.
-    const supportsFileSystemAccess =
-        "showDirectoryPicker" in window &&
-        (() => {
-            try {
-                return window.self === window.top;
-            } catch {
-                return false;
-            }
-        })();
-    // If the File System Access API is supported…
-    if (supportsFileSystemAccess) {
-        let directoryStructure = undefined;
+function resizableGrid(table) {
+    var row = table.getElementsByTagName('tr')[0],
+        cols = row ? row.children : undefined;
+    if (!cols) return;
 
-        // Recursive function that walks the directory structure.
-        const getFiles = async (dirHandle, path = dirHandle.name) => {
-            const dirs = [];
-            const files = [];
-            for await (const entry of dirHandle.values()) {
-                const nestedPath = `${path}/${entry.name}`;
-                if (entry.kind === "file") {
-                    files.push(
-                        entry.getFile().then((file) => {
-                            file.directoryHandle = dirHandle;
-                            file.handle = entry;
-                            return Object.defineProperty(file, "webkitRelativePath", {
-                                configurable: true,
-                                enumerable: true,
-                                get: () => nestedPath,
-                            });
-                        })
-                    );
-                } else if (entry.kind === "directory") {
-                    dirs.push(getFiles(entry, nestedPath));
-                }
-            }
-            return [
-                ...(await Promise.all(dirs)).flat(),
-                ...(await Promise.all(files)),
-            ];
-        };
+    table.style.overflow = 'hidden';
 
-        try {
-            // Open the directory.
-            const handle = await showDirectoryPicker({
-                mode,
-            });
-            // Get the directory structure.
-            directoryStructure = getFiles(handle, undefined);
-        } catch (err) {
-            if (err.name !== "AbortError") {
-                console.error(err.name, err.message);
-            }
-        }
-        return directoryStructure;
+    var tableHeight = table.offsetHeight;
+
+    for (var i = 0; i < cols.length; i++) {
+        var div = createDiv(tableHeight);
+        cols[i].appendChild(div);
+        cols[i].style.position = 'relative';
+        setListeners(div);
     }
-    // Fallback if the File System Access API is not supported.
-    return new Promise((resolve) => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.webkitdirectory = true;
 
-        input.addEventListener('change', () => {
-            let files = Array.from(input.files);
-            resolve(files);
+    function setListeners(div) {
+        var pageX, curCol, nxtCol, curColWidth, nxtColWidth;
+
+        div.addEventListener('mousedown', function (e) {
+            curCol = e.target.parentElement;
+            nxtCol = curCol.nextElementSibling;
+            pageX = e.pageX;
+
+            var padding = paddingDiff(curCol);
+
+            curColWidth = curCol.offsetWidth - padding;
+            if (nxtCol)
+                nxtColWidth = nxtCol.offsetWidth - padding;
         });
-        if ('showPicker' in HTMLInputElement.prototype) {
-            input.showPicker();
-        } else {
-            input.click();
+
+        div.addEventListener('mouseover', function (e) {
+            e.target.style.borderRight = '2px solid #0000ff';
+        })
+
+        div.addEventListener('mouseout', function (e) {
+            e.target.style.borderRight = '';
+        })
+
+        document.addEventListener('mousemove', function (e) {
+            if (curCol) {
+                var diffX = e.pageX - pageX;
+
+                if (nxtCol)
+                    nxtCol.style.width = (nxtColWidth - (diffX)) + 'px';
+
+                curCol.style.width = (curColWidth + diffX) + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', function (e) {
+            curCol = undefined;
+            nxtCol = undefined;
+            pageX = undefined;
+            nxtColWidth = undefined;
+            curColWidth = undefined
+        });
+    }
+
+    function createDiv(height) {
+        var div = document.createElement('div');
+        div.style.top = 0;
+        div.style.right = 0;
+        div.style.width = '5px';
+        div.style.position = 'absolute';
+        div.style.cursor = 'col-resize';
+        div.style.userSelect = 'none';
+        div.style.height = height + 'px';
+        return div;
+    }
+
+    function myFunction() {
+        document.getElementById("demo").innerHTML = "You selected some text!";
+    }
+
+    function paddingDiff(col) {
+
+        if (getStyleVal(col, 'box-sizing') == 'border-box') {
+            return 0;
         }
-    });
+
+        var padLeft = getStyleVal(col, 'padding-left');
+        var padRight = getStyleVal(col, 'padding-right');
+        return (parseInt(padLeft) + parseInt(padRight));
+
+    }
+
+    function getStyleVal(elm, css) {
+        return (window.getComputedStyle(elm, null).getPropertyValue(css))
+    }
 };
 
+init();
 

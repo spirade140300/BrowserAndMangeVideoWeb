@@ -15,7 +15,7 @@ namespace BrowseAndManageVideos_WEB.Controllers
 
         public IActionResult Index()
         {
-            return View();
+            return View("../Views/Home/Index.cshtml");
         }
 
         public IActionResult Privacy()

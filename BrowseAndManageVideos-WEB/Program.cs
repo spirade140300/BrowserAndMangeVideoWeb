@@ -1,7 +1,13 @@
+using BrowseAndManageVideos_WEB.Controllers;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddDbContext<BrowseAndManageVideos_WEB.Controllers.DataContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("Movies")));
 
 var app = builder.Build();
 var handler = new HttpClientHandler

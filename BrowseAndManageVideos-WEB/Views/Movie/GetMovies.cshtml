@@ -1,0 +1,71 @@
+﻿@{
+    ViewData["Title"] = "About";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <link rel="stylesheet" href="/wwwroot/css/GetMovies.css">
+    <title>@ViewData["Title"]</title>
+</head>
+<body>
+    <div>
+        <div class="inline">
+            <p class="inline">Search: </p>
+            <input type="text" class="text-input inline" title="Search..." placeholder="Search..." />
+            <button class="btn inline" id="btn-search" role="button" style="margin-bottom: 3px">Search</button>
+        </div>
+        <div class="inline float-right">
+            <button class="btn" role="button" id="btn-open-file">Open file</button>
+        </div>
+    </div>
+    <div id="MusicFrame"></div>
+    <div class="table-container">
+        <table id="movie-table" class="table">
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Path</th>
+                <th>Actor</th>
+                <th>Width</th>
+                <th>Height</th>
+                <th>ContentType</th>
+                <th>Rating</th>
+                <th>TotalBitrate</th>
+                <th>EncodingBitrate</th>
+                <th>Size</th>
+                <th>Deleted</th>
+                <th>Options</th>
+            </tr>
+            @foreach (var movie in ViewData["movies"] as List<Movie>)
+            {
+                <tr>
+                    <th>@movie.Id</th>
+                    <th>@movie.Name</th>
+                    <th>@movie.Path</th>
+                    <th>@movie.Actor</th>
+                    <th>@movie.FrameWidth</th>
+                    <th>@movie.FrameHeight</th>
+                    <th>@movie.ContentType</th>
+                    <th>@movie.Rating</th>
+                    <th>@movie.TotalBitrate</th>
+                    <th>@movie.EncodingBitrate</th>
+                    <th>@movie.Size</th>
+                    <th>@movie.IsDeleted</th>
+                    <th>
+                        <select name="options" id="options-@movie.Id" onchange="processOption(event)">
+                            <option value="none">--options--</option>
+                            <option value="open">open</option>
+                            <option value="edit">edit</option>
+                            <option value="select">select</option>
+                            <option value="delete">delete</option>
+                        </select>
+                    </th>
+                </tr>
+            }
+
+        </table>
+    </div>
+</body>
+</html>

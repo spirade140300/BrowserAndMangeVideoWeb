@@ -21,29 +21,23 @@ body {
     margin-bottom: 60px;
 }
 
+.table-container {
+    overflow-x: auto;
+    width: 120%;
+    position: relative;
+    left: -10%;
+}
 
 table {
     font-family: arial, sans-serif;
     border-collapse: collapse;
-    width: 100%;
 }
 
 td, th {
     border: 1px solid #dddddd;
     text-align: left;
-    padding: 8px;
-    min-width: 5%;
+    padding: 4px;
 }
-
-tr:nth-child(even) {
-    background-color: #dddddd;
-}
-
-movie-table {
-    display: block;
-    overflow-x: auto;
-}
-
 
 .inline {
     display: inline-block !important;
@@ -54,9 +48,7 @@ movie-table {
 }
 
 .table-container {
-    width: 120%;
-    position: relative;
-    left: -10%;
+    
 }
 
 .text-input {

@@ -17,17 +17,15 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.VisualBasic.Devices;
 using Microsoft.WindowsAPICodePack.Shell;
 using Microsoft.WindowsAPICodePack.Shell.PropertySystem;
-using NLog;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using Newtonsoft.Json;
 
 namespace BrowseAndManageVideos_WEB.Controllers
 {
-    [Route("")]
+    [Route("movies")]
     [ApiController]
     public class MovieController : Controller
     {
-        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         DataContext _dataContext;
 
         public MovieController(DataContext dataContext)
@@ -128,7 +126,7 @@ namespace BrowseAndManageVideos_WEB.Controllers
             }
             catch (Exception e)
             {
-                Logger.Error(e);
+               
             }
 
         }
@@ -143,7 +141,7 @@ namespace BrowseAndManageVideos_WEB.Controllers
             }
             catch (Exception e)
             {
-                Logger.Error(e);
+                
             }
             return new List<Movie>();
         }
@@ -158,7 +156,7 @@ namespace BrowseAndManageVideos_WEB.Controllers
             }
             catch (Exception e)
             {
-                Logger.Error(e);
+                
                 return false;
             }
         }
@@ -205,24 +203,94 @@ namespace BrowseAndManageVideos_WEB.Controllers
         }
 
         [HttpGet]
-        [Route("movies/page={page}")]
-        [Route("movies/page={page}/search={search}")]
-        public IActionResult GetMovies(int page, string? search)
+        [Route("")]
+        public IActionResult GetMoviesNoParameter()
+        {
+            try
+            {
+                List<Movie> movies = _dataContext.Movies.Take(100).ToList();
+                ViewData["movies"] = movies;
+
+                return View("/Views/Movie/GetMovies.cshtml");
+            }
+            catch (Exception e)
+            {
+
+            }
+            return BadRequest("Error");
+        }
+
+        [HttpGet]
+        [Route("page={page}")]
+        public IActionResult GetMoviesWithPaging(int page)
         {
             try
             {
                 // list
-                List<Movie> listAfterFilter = GetMoviesFromDatabase().Where(movie => movie.Name.ToLower().Contains(search)).OrderBy(x => x.FrameWidth).ToList();
+                List<Movie> listAfterFilter = _dataContext.Movies.ToList();
                 // paging
                 int totalPage = listAfterFilter.Count / 100;
-                listAfterFilter = listAfterFilter.Skip(totalPage * (page - 1)).Take(100).ToList();
-                return Ok(listAfterFilter);
+                listAfterFilter = _dataContext.Movies.Skip(totalPage * (page - 1)).Take(100).ToList();
+                ViewData["movies"] = listAfterFilter;
+
+                return View("GetMovies.cshtml");
             }
             catch(Exception e) 
             { 
                 
             }
             return BadRequest("Error");
+        }
+
+        [HttpGet]
+        [Route("page={page}/search={search}")]
+        public IActionResult GetMoviesWidthSearch(int page, string search)
+        {
+            try
+            {
+                // list
+                List<Movie> listAfterFilter = _dataContext.Movies.Take(100).ToList();
+                // paging
+                int totalPage = listAfterFilter.Count / 100;
+                listAfterFilter = listAfterFilter.Skip(totalPage * (page - 1)).Take(100).ToList();
+                ViewData["movies"] = listAfterFilter;
+                return View("GetMovies.cshtml");
+            }
+            catch (Exception e)
+            {
+
+            }
+            return BadRequest("Error");
+        }
+
+        [HttpPost]
+        [Route("openfile={id}")]
+        public IActionResult OpenFile(int id)
+        {
+            try
+            {
+                Movie movie = _dataContext.Movies.FirstOrDefault(x => x.Id == id);
+                if(movie == null)
+                {
+                    ViewBag["openfileresult"].Message = "Can not find selected file!";
+                    return View("/Views/Movie/GetMovies.cshtml");
+                }
+                else
+                {
+                    var p = new Process();
+                    p.StartInfo = new ProcessStartInfo(movie.Path)
+                    {
+                        UseShellExecute = true
+                    };
+                    p.Start();
+                    ViewBag["openfileresult"].Message = "File openned";
+                    return View("/Views/Movie/GetMovies.cshtml");
+                }
+            }
+            catch (Exception e)
+            {
+                return BadRequest("Error");
+            }
         }
 
         [HttpGet]
@@ -246,17 +314,17 @@ namespace BrowseAndManageVideos_WEB.Controllers
                 }
                 List<Movie> allMoviesInDatabase = GetMoviesFromDatabase();
                 List<Movie> allMoviesInFolder = GetMoviesFromFile(path);
-                Logger.Info(allMoviesInFolder);
+                
                 return 0;
             }
             catch (FileNotFoundException fnfe)
             {
-                Logger.Error(fnfe);
+                
                 return 0; 
             }
             catch (Exception e)
             {
-                Logger.Error(e);
+                
                 return 0;
             }
         }
@@ -278,12 +346,12 @@ namespace BrowseAndManageVideos_WEB.Controllers
             }
             catch (FileNotFoundException fnfe)
             {
-                Logger.Error(fnfe);
+                
                 return false;
             }
             catch (Exception e)
             {
-                Logger.Error(e);
+                
                 return false;
             }
 
@@ -312,11 +380,6 @@ namespace BrowseAndManageVideos_WEB.Controllers
         //    Debug.WriteLine("here 3");
         //    return View();
         //}
-        [HttpGet]
-        private ActionResult View()
-        {
-            throw new NotImplementedException();
-        }
 
         private string MakeDataTable(List<Movie> movies)
         {
