@@ -7,6 +7,8 @@
 function init() {
     //document.getElementById("btn-search").onclick = async function () { search() };
     //document.getElementById("btn-open-file").onclick = function () { openFileInDirectory() };
+    document.getElementById("checkbox-all").onclick = function () { checkAll() };
+    
     resizableGrid(document.getElementById("movie-table"));
     callDataDefault();
 }
@@ -15,32 +17,51 @@ function search() {
     console.log("search");
 }
 
-function PlayMusicClicked() {
-    var sFileName = "F:/200GANA-1996";
-    if (sFileName.length > 3) {
-        var oFrame = document.getElementById("MusicFrame");
-        if (!oFrame) {
-            oFrame = document.createElement("iframe");
-            oFrame.id = "MusicFrame";
-            oFrame.style.display = "none";
-            document.body.appendChild(oFrame);
+function checkAll() {
+    checkboxes = document.getElementsByName("table-checkbox");
+    for (var i = 0, n = checkboxes.length; i < n; i++) {
+        if (checkboxes[i].checked) {
+            checkboxes[i].checked = false;
+        } else {
+            checkboxes[i].checked = true;
         }
-        oFrame.src = sFileName;
     }
 }
 
 function processOption(event) {
-    switch (event.target.value) {
+    switch (event.target.value) { //options-id
         case "none":
             // code block
             break;
         case "open":
             // code block
-            PlayMusicClicked();
-         
+            fetch(`https://localhost:44378/movies/openfile=${event.target.id.replace('options-', '') }`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('File opened successfully.');
+                    } else {
+                        console.error('An error occurred while opening the file.');
+                    }
+                })
+                .catch(error => {
+                    console.error('An error occurred:', error);
+                });
+            
             break;
         case "edit":
             // code block
+            var movieID = event.target.id.replace('options-', '');
+            let newName = prompt("Update name/ path for Movie ID = " + movieID);
+            if (newName == null || newName == "") {
+                alert("User cancelled the prompt.");
+            } else {
+                alert("sucess");
+            }
             break;
         case "select":
             // code block
@@ -54,9 +75,62 @@ function processOption(event) {
 
 }
 
+function processOptionSetting(event) {
+    switch (document.getElementById("option-setting").value) { //options-id
+        case "none":
+            // code block
+            break;
+        case "update":
+            // code block
+            fetch(`https://localhost:44378/movies/movies/insertall}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log('File opened successfully.');
+                } else {
+                    console.error('An error occurred while opening the file.');
+                }
+            })
+            .catch(error => {
+                console.error('An error occurred:', error);
+            });
+
+            break;
+        case "refresh":
+            var text = document.getElementById("text-search").value();
+            // code block
+            fetch(`https://localhost:44378/movies/movies/insertall}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('File opened successfully.');
+                    } else {
+                        console.error('An error occurred while opening the file.');
+                    }
+                })
+                .catch(error => {
+                    console.error('An error occurred:', error);
+                });
+            break;
+        default:
+        // code block
+    }
+
+}
+
 function callDataDefault() {
 
 }
+
+
 
 function resizableGrid(table) {
     var row = table.getElementsByTagName('tr')[0],
@@ -129,10 +203,6 @@ function resizableGrid(table) {
         return div;
     }
 
-    function myFunction() {
-        document.getElementById("demo").innerHTML = "You selected some text!";
-    }
-
     function paddingDiff(col) {
 
         if (getStyleVal(col, 'box-sizing') == 'border-box') {
@@ -150,5 +220,8 @@ function resizableGrid(table) {
     }
 };
 
-init();
+window.onload = function () {
+    init();
+}
+
 

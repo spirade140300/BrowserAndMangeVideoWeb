@@ -10,20 +10,24 @@
     <title>@ViewData["Title"]</title>
 </head>
 <body>
-    <div>
+    <div class="utility">
         <div class="inline">
             <p class="inline">Search: </p>
-            <input type="text" class="text-input inline" title="Search..." placeholder="Search..." />
+            <input type="text" class="text-input inline" id="text-search" title="Search..." placeholder="Search..." />
             <button class="btn inline" id="btn-search" role="button" style="margin-bottom: 3px">Search</button>
         </div>
         <div class="inline float-right">
-            <button class="btn" role="button" id="btn-open-file">Open file</button>
+            <select class="select" id="option-setting" onchange="processOptionSetting(event)">
+                <option value="none">options</option>
+                <option value="update">update</option>
+                <option value="refresh">delete</option>
+            </select>
         </div>
     </div>
-    <div id="MusicFrame"></div>
     <div class="table-container">
         <table id="movie-table" class="table">
             <tr>
+                <th><input type="checkbox" id="checkbox-all"></th>
                 <th>ID</th>
                 <th>Name</th>
                 <th>Path</th>
@@ -41,6 +45,7 @@
             @foreach (var movie in ViewData["movies"] as List<Movie>)
             {
                 <tr>
+                    <th><input type="checkbox" name="table-checkbox"></th>
                     <th>@movie.Id</th>
                     <th>@movie.Name</th>
                     <th>@movie.Path</th>
@@ -54,7 +59,7 @@
                     <th>@movie.Size</th>
                     <th>@movie.IsDeleted</th>
                     <th>
-                        <select name="options" id="options-@movie.Id" onchange="processOption(event)">
+                        <select name="options" id="options-@movie.Id" onchange="processOption(event)" class="select">
                             <option value="none">--options--</option>
                             <option value="open">open</option>
                             <option value="edit">edit</option>

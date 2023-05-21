@@ -116,17 +116,24 @@ namespace BrowseAndManageVideos_WEB.Controllers
             return new List<Movie>();
         }
 
-        private void UpdateFilePropertyFromDatabase() 
+        [HttpGet]
+        [Route("/update")]
+        public void UpdateMovie(int id, string name, string path, bool IsDeleted) 
         {
             try
             {
-                List<Movie> movies = _dataContext.Movies.ToList();
-                
-
+                Movie oldMovie = GetMovieFromDatabase(id);
+                if (oldMovie != new Movie())
+                {
+                    oldMovie.Name = name;
+                    oldMovie.Path = path;
+                    oldMovie.IsDeleted = IsDeleted;
+                    _dataContext.Movies.Update(oldMovie);
+                }
             }
             catch (Exception e)
             {
-               
+
             }
 
         }
@@ -202,6 +209,27 @@ namespace BrowseAndManageVideos_WEB.Controllers
             }
         }
 
+        private Movie GetMovieFromDatabase(int id)
+        {
+            try
+            {
+                Movie movie = _dataContext.Movies.Where(m => m.Id == id).FirstOrDefault();
+                if(movie == null)
+                {
+                    return new Movie();
+                }
+                else
+                {
+                    return movie;
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
+            return new Movie();
+        }
+
         [HttpGet]
         [Route("")]
         public IActionResult GetMoviesNoParameter()
@@ -272,12 +300,19 @@ namespace BrowseAndManageVideos_WEB.Controllers
                 Movie movie = _dataContext.Movies.FirstOrDefault(x => x.Id == id);
                 if(movie == null)
                 {
+                    if(movie.IsDeleted == true)
+                    {
+                        ViewBag["openfileresult"].Message = "File ";
+                        return View("/Views/Movie/GetMovies.cshtml");
+                    }
                     ViewBag["openfileresult"].Message = "Can not find selected file!";
                     return View("/Views/Movie/GetMovies.cshtml");
                 }
                 else
                 {
-                    var p = new Process();
+                    ViewBag["openfileresult"].Message = "Can not find selected file!";
+                    return View("/Views/Movie/GetMovies.cshtml");
+                    Process p = new Process();
                     p.StartInfo = new ProcessStartInfo(movie.Path)
                     {
                         UseShellExecute = true
@@ -389,6 +424,7 @@ namespace BrowseAndManageVideos_WEB.Controllers
                 sb.AppendLine("<table>");
                 sb.AppendLine("" +
                     "<tr>" +
+                    "<th>Checkbox</th>"+
                     "<th>ID</th>" +
                     "<th>Name</th>" +
                     "<th>Path</th>" +
@@ -406,6 +442,7 @@ namespace BrowseAndManageVideos_WEB.Controllers
                 foreach (Movie movie in movies)
                 {
                     sb.AppendLine("<tr>");
+                    sb.AppendLine($"<td><input type=\"checkbox\"></td>");
                     sb.AppendLine($"<td>{movie.Id}</td>");
                     sb.AppendLine($"<td>{movie.Name}</td>");
                     sb.AppendLine($"<td>{movie.Path}</td>");

@@ -1,4 +1,6 @@
-﻿namespace BrowseAndManageVideos_WEB.Models
+﻿using Microsoft.Extensions.Hosting;
+
+namespace BrowseAndManageVideos_WEB.Models
 {
     public class Movie
     {
