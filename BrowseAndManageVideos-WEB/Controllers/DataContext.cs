@@ -19,5 +19,7 @@ namespace BrowseAndManageVideos_WEB.Controllers
         }
 
         public DbSet<Movie> Movies { get; set; }
+        public DbSet<Category> Categories { get; set; }
+        public DbSet<MovieCategory> MoviesCategory { get; set; }
     }
 }

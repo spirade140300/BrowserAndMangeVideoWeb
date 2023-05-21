@@ -8,7 +8,11 @@ function init() {
     //document.getElementById("btn-search").onclick = async function () { search() };
     //document.getElementById("btn-open-file").onclick = function () { openFileInDirectory() };
     document.getElementById("checkbox-all").onclick = function () { checkAll() };
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> e8e9281
     resizableGrid(document.getElementById("movie-table"));
     callDataDefault();
 }
@@ -35,7 +39,11 @@ function processOption(event) {
             break;
         case "open":
             // code block
+<<<<<<< HEAD
             fetch(`https://localhost:44378/movies/openfile=${event.target.id.replace('options-', '') }`, {
+=======
+            fetch(`https://localhost:44378/movies/openfile=${event.target.id.replace('options-', '')}`, {
+>>>>>>> e8e9281
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -51,7 +59,11 @@ function processOption(event) {
                 .catch(error => {
                     console.error('An error occurred:', error);
                 });
+<<<<<<< HEAD
             
+=======
+
+>>>>>>> e8e9281
             break;
         case "edit":
             // code block
@@ -88,6 +100,7 @@ function processOptionSetting(event) {
                     'Content-Type': 'application/json'
                 }
             })
+<<<<<<< HEAD
             .then(response => {
                 if (response.ok) {
                     console.log('File opened successfully.');
@@ -98,6 +111,18 @@ function processOptionSetting(event) {
             .catch(error => {
                 console.error('An error occurred:', error);
             });
+=======
+                .then(response => {
+                    if (response.ok) {
+                        console.log('File opened successfully.');
+                    } else {
+                        console.error('An error occurred while opening the file.');
+                    }
+                })
+                .catch(error => {
+                    console.error('An error occurred:', error);
+                });
+>>>>>>> e8e9281
 
             break;
         case "refresh":
@@ -223,5 +248,8 @@ function resizableGrid(table) {
 window.onload = function () {
     init();
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> e8e9281
 

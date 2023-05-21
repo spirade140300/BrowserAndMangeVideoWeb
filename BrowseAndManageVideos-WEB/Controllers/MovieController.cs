@@ -148,7 +148,7 @@ namespace BrowseAndManageVideos_WEB.Controllers
             }
             catch (Exception e)
             {
-                
+
             }
             return new List<Movie>();
         }
@@ -163,7 +163,7 @@ namespace BrowseAndManageVideos_WEB.Controllers
             }
             catch (Exception e)
             {
-                
+
                 return false;
             }
         }
@@ -214,7 +214,7 @@ namespace BrowseAndManageVideos_WEB.Controllers
             try
             {
                 Movie movie = _dataContext.Movies.Where(m => m.Id == id).FirstOrDefault();
-                if(movie == null)
+                if (movie == null)
                 {
                     return new Movie();
                 }
@@ -263,9 +263,9 @@ namespace BrowseAndManageVideos_WEB.Controllers
 
                 return View("GetMovies.cshtml");
             }
-            catch(Exception e) 
-            { 
-                
+            catch (Exception e)
+            {
+
             }
             return BadRequest("Error");
         }
@@ -298,20 +298,18 @@ namespace BrowseAndManageVideos_WEB.Controllers
             try
             {
                 Movie movie = _dataContext.Movies.FirstOrDefault(x => x.Id == id);
-                if(movie == null)
+                if (movie == null)
                 {
-                    if(movie.IsDeleted == true)
-                    {
-                        ViewBag["openfileresult"].Message = "File ";
-                        return View("/Views/Movie/GetMovies.cshtml");
-                    }
                     ViewBag["openfileresult"].Message = "Can not find selected file!";
                     return View("/Views/Movie/GetMovies.cshtml");
                 }
                 else
                 {
-                    ViewBag["openfileresult"].Message = "Can not find selected file!";
-                    return View("/Views/Movie/GetMovies.cshtml");
+                    if (movie.IsDeleted == true)
+                    {
+                        ViewBag["openfileresult"].Message = "File has been deleted ";
+                        return View("/Views/Movie/GetMovies.cshtml");
+                    }
                     Process p = new Process();
                     p.StartInfo = new ProcessStartInfo(movie.Path)
                     {
@@ -349,17 +347,17 @@ namespace BrowseAndManageVideos_WEB.Controllers
                 }
                 List<Movie> allMoviesInDatabase = GetMoviesFromDatabase();
                 List<Movie> allMoviesInFolder = GetMoviesFromFile(path);
-                
+
                 return 0;
             }
             catch (FileNotFoundException fnfe)
             {
-                
-                return 0; 
+
+                return 0;
             }
             catch (Exception e)
             {
-                
+
                 return 0;
             }
         }
@@ -381,12 +379,12 @@ namespace BrowseAndManageVideos_WEB.Controllers
             }
             catch (FileNotFoundException fnfe)
             {
-                
+
                 return false;
             }
             catch (Exception e)
             {
-                
+
                 return false;
             }
 
@@ -424,7 +422,7 @@ namespace BrowseAndManageVideos_WEB.Controllers
                 sb.AppendLine("<table>");
                 sb.AppendLine("" +
                     "<tr>" +
-                    "<th>Checkbox</th>"+
+                    "<th>Checkbox</th>" +
                     "<th>ID</th>" +
                     "<th>Name</th>" +
                     "<th>Path</th>" +
@@ -460,7 +458,7 @@ namespace BrowseAndManageVideos_WEB.Controllers
                 }
                 return sb.ToString();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
 
             }
