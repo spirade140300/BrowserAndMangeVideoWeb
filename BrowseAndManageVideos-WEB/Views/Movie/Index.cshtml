@@ -1,5 +1,7 @@
 ﻿@{
     ViewData["Title"] = "About";
+    var movies = new List<Movie>();
+    movies = ViewData["movies"] as List<Movie>;
 }
 
 <!DOCTYPE html>
@@ -7,7 +9,6 @@
 <head>
     <meta name="viewport" content="width=device-width" />
     <link rel="stylesheet" href="/wwwroot/css/GetMovies.css">
-    <title>@ViewData["Title"]</title>
 </head>
 <body>
     <div class="utility">
@@ -42,7 +43,7 @@
                 <th>Deleted</th>
                 <th>Options</th>
             </tr>
-            @foreach (var movie in ViewData["movies"] as List<Movie>)
+            @foreach (var movie in movies )
             {
                 <tr>
                     <th><input type="checkbox" name="table-checkbox"></th>
@@ -63,14 +64,23 @@
                             <option value="none">--options--</option>
                             <option value="open">open</option>
                             <option value="edit">edit</option>
-                            <option value="select">select</option>
                             <option value="delete">delete</option>
                         </select>
                     </th>
                 </tr>
             }
-
         </table>
+    </div>
+    <div class="pagination">
+        <a onclick="processPaging(this)" href="javascript:void(0);" name="paging" data="first">&laquo;&laquo;</a>
+        <a onclick="processPaging(this)" href="javascript:void(0);" name="paging" data="backward">&laquo;</a>
+        <a onclick="processPaging(this)" href="javascript:void(0);" name="paging" data="1" class="active">1</a>
+        @for (int i = 2; i < (int)ViewData["pages"] + 2; i++)
+        {
+            <a onclick="processPaging(this)" href="javascript:void(0);" name="paging" data="@i">@i</a>
+        }
+        <a onclick="processPaging(this)" href="javascript:void(0);" name="paging" data="forward">&raquo;</a>
+        <a onclick="processPaging(this)" href="javascript:void(0);" name="paging" data="last">&raquo;&raquo;</a>
     </div>
 </body>
 </html>

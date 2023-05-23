@@ -19,10 +19,15 @@ using Microsoft.WindowsAPICodePack.Shell;
 using Microsoft.WindowsAPICodePack.Shell.PropertySystem;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System.Text.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
+using System.Linq.Expressions;
+using BrowseAndManageVideos_WEB.Utils;
 
 namespace BrowseAndManageVideos_WEB.Controllers
 {
-    [Route("movies")]
+    [Route("Movie")]
     [ApiController]
     public class MovieController : Controller
     {
@@ -32,6 +37,227 @@ namespace BrowseAndManageVideos_WEB.Controllers
         {
             _dataContext = dataContext;
         }
+
+        [HttpGet]
+        [Route("")]
+        public IActionResult GetMoviesNoParameter()
+        {
+            try
+            {
+                List<Movie> movies = _dataContext.Movies.Take(100).ToList();
+                int totalPage = _dataContext.Movies.ToList().Count / 100;
+                ViewData["pages"] = totalPage;
+                ViewData["movies"] = movies;
+                ViewData["currentpage"] = 1;
+                WriteLogFile.WriteLog("Information-Controller: GetMoviesNoParameter");
+                return View("/Views/Movie/Index.cshtml");
+            }
+            catch (Exception e)
+            {
+                WriteLogFile.WriteLog("Error-Controller: GetMoviesNoParameter " + e.Message);
+            }
+            return BadRequest("Error");
+        }
+
+        [HttpGet]
+        [Route("{Page}")]
+        public IActionResult GetMoviesWithPaging([FromRoute] int page)
+        {
+            try
+            {
+                // list
+                List<Movie> listAfterFilter = _dataContext.Movies.ToList();
+                // paging
+                int totalPage = listAfterFilter.Count / 100;
+                listAfterFilter = _dataContext.Movies.Skip(100 * (page - 1)).Take(100).ToList();
+                ViewData["movies"] = listAfterFilter;
+                ViewData["pages"] = totalPage;
+                ViewData["currentpage"] = page;
+                WriteLogFile.WriteLog("Information-Controller: GetMoviesWithPaging");
+                return RedirectToAction("/Views/Movie/Index.cshtml");
+            }
+            catch (Exception e)
+            {
+                WriteLogFile.WriteLog("Error-Controller: GetMoviesWithPaging " + e.Message);
+            }
+            return BadRequest("Error");
+        }
+
+        [HttpGet]
+        [Route("{page}/s={search}")]
+        public IActionResult GetMoviesWidthSearch(int page, string search)
+        {
+            try
+            {
+                // list
+                List<Movie> listAfterFilter = _dataContext.Movies.Take(100).ToList();
+                // paging
+                int totalPage = listAfterFilter.Count / 100;
+                listAfterFilter = listAfterFilter.Skip(totalPage * (page - 1)).Take(100).ToList();
+                ViewData["movies"] = listAfterFilter;
+                ViewData["pages"] = totalPage;
+                ViewData["currentpage"] = page;
+                WriteLogFile.WriteLog("Information-Controller: GetMoviesWidthSearch");
+                return View("/Views/Movie/Index.cshtml");
+            }
+            catch (Exception e)
+            {
+                WriteLogFile.WriteLog("Error-Controller: GetMoviesWidthSearch " + e.Message);
+            }
+            return BadRequest("Error");
+        }
+
+
+        [HttpPatch]
+        [Route("Update")]
+        public IActionResult UpdateMovie([FromBody] JsonElement data)
+        {
+            try
+            {
+                //var newdetail = JsonConvert.DeserializeObject<UdpdateMovieNameData>(data);
+                UdpdateMovieNameData? udpdateMovieNameData = JsonSerializer.Deserialize<UdpdateMovieNameData>(data);
+                if(udpdateMovieNameData != null)
+                {
+                    var id = udpdateMovieNameData.Id;
+                    var name = udpdateMovieNameData.Name;
+                    Movie movie = _dataContext.Movies.Where(m => m.Id == int.Parse(id)).FirstOrDefault();
+                    if(movie != null)
+                    {
+                        var oldPath = movie.Path;
+                        string directory = Path.GetDirectoryName(movie.Path);
+                        string extension = Path.GetExtension(movie.Path);
+                        string newPath = Path.Combine(directory, name + extension);
+                        movie.Name = name;
+                        movie.Path = newPath;
+                        _dataContext.Movies.Update(movie);
+                        _dataContext.SaveChanges();
+                        System.IO.File.Move(oldPath, newPath);
+                        WriteLogFile.WriteLog("Information-Controller: UpdateMovie");
+                    }
+                    else
+                    {
+                        WriteLogFile.WriteLog("Warning-Controller: UpdateMovie - Movie not exist");
+                    }
+                }
+                else
+                {
+                    WriteLogFile.WriteLog("Warning-Controller: UpdateMovie - Data receive error");
+                }
+            }
+            catch (Exception e)
+            {
+                WriteLogFile.WriteLog("Error-Controller: UpdateMovie " + e.Message);
+            }
+            return View();
+        }
+
+        [HttpPost]
+        [Route("Openfile")]
+        public void OpenFile([FromQuery]int id)
+        {
+            try
+            {
+                Movie movie = _dataContext.Movies.Where(m => m.Id == id).FirstOrDefault();
+                if (movie != null)
+                {
+                    if (movie.IsDeleted == true)
+                    {
+                        return;
+                    }
+                    Process p = new Process();
+                    p.StartInfo = new ProcessStartInfo(movie.Path)
+                    {
+                        UseShellExecute = true
+                    };
+                    p.Start();
+                }
+                WriteLogFile.WriteLog("Information-Controller: OpenFile");
+            }
+            catch (Exception e)
+            {
+                WriteLogFile.WriteLog("Error-Controller: OpenFile " + e.Message);
+            }
+        }
+
+        [HttpGet]
+        [Route("Movies/id")]
+        public List<Movie> Movies()
+        {
+            List<Movie> movies = new List<Movie>();
+            Debug.WriteLine(movies);
+            return movies;
+        }
+
+        [HttpGet]
+        [Route("Movies/AutoUpdateall/{path}")]
+        public int AutoUpdateAll(string? path)
+        {
+            try
+            {
+                if (path == null)
+                {
+                    throw new FileNotFoundException("Path can not be null");
+                }
+                List<Movie> allMoviesInDatabase = GetMoviesFromDatabase();
+                List<Movie> allMoviesInFolder = GetMoviesFromFile(path);
+                WriteLogFile.WriteLog("Information-Controller: AutoUpdateAll");
+                return 0;
+            }
+            catch (FileNotFoundException fnfe)
+            {
+                WriteLogFile.WriteLog("Error-Controller: AutoUpdateAll " + fnfe.Message);
+                return 0;
+            }
+            catch (Exception e)
+            {
+                WriteLogFile.WriteLog("Error-Controller: AutoUpdateAll " + e.Message);
+                return 0;
+            }
+        }
+
+        [HttpGet]
+        [Route("Movies/Insertall")]
+        public bool AutoUpdateAll()
+        {
+            try
+            {
+                List<Movie> allMoviesInFolderF = GetMoviesFromFile(@"F:\");
+                List<Movie> allMoviesInFolderE = GetMoviesFromFile(@"E:\");
+                List<Movie> allMoviesInDatabase = _dataContext.Movies.ToList();
+                List<Movie> folderENotInDatebase = allMoviesInFolderE.Except(allMoviesInDatabase).ToList();
+                List<Movie> folderFNotInDatebase = allMoviesInFolderF.Except(allMoviesInDatabase).ToList();
+                InsertMoviesToDatabase(folderENotInDatebase);
+                InsertMoviesToDatabase(folderFNotInDatebase);
+                return true;
+            }
+            catch (FileNotFoundException fnfe)
+            {
+
+                return false;
+            }
+            catch (Exception e)
+            {
+
+                return false;
+            }
+
+        }
+
+        [HttpPost]
+        [Route("movies/save")]
+        public ActionResult Index()
+        {
+            Debug.WriteLine("here 2");
+            return View();
+        }
+
+        //[Route("Delete")]
+        //public ActionResult Delete()
+        //{
+        //    Debug.WriteLine("here 3");
+        //    return View();
+        //}
+
         private List<Movie> GetMoviesFromFile(string folderPath)
         {
             try
@@ -116,26 +342,71 @@ namespace BrowseAndManageVideos_WEB.Controllers
             return new List<Movie>();
         }
 
-        [HttpGet]
-        [Route("/update")]
-        public void UpdateMovie(int id, string name, string path, bool IsDeleted) 
+        private string MakeDataTable(List<Movie> movies)
         {
             try
             {
-                Movie oldMovie = GetMovieFromDatabase(id);
-                if (oldMovie != new Movie())
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine("<table>");
+                sb.AppendLine("" +
+                    "<tr>" +
+                    "<th>Checkbox</th>" +
+                    "<th>ID</th>" +
+                    "<th>Name</th>" +
+                    "<th>Path</th>" +
+                    "<th>Description</th>" +
+                    "<th>Actor</th>" +
+                    "<th>ContentType</th>" +
+                    "<th>IsDeleted</th>" +
+                    "<th>Rating</th>" +
+                    "<th>Size</th>" +
+                    "<th>FrameWidth</th>" +
+                    "<th>FrameHeight</th>" +
+                    "<th>TotalBitrate</th>" +
+                    "<th>EncodingBitrate</th>" +
+                    "</tr>");
+                foreach (Movie movie in movies)
                 {
-                    oldMovie.Name = name;
-                    oldMovie.Path = path;
-                    oldMovie.IsDeleted = IsDeleted;
-                    _dataContext.Movies.Update(oldMovie);
+                    sb.AppendLine("<tr>");
+                    sb.AppendLine($"<td><input type=\"checkbox\"></td>");
+                    sb.AppendLine($"<td>{movie.Id}</td>");
+                    sb.AppendLine($"<td>{movie.Name}</td>");
+                    sb.AppendLine($"<td>{movie.Path}</td>");
+                    sb.AppendLine($"<td>{movie.Description}</td>");
+                    sb.AppendLine($"<td>{movie.Actor}</td>");
+                    sb.AppendLine($"<td>{movie.ContentType}</td>");
+                    sb.AppendLine($"<td>{movie.IsDeleted}</td>");
+                    sb.AppendLine($"<td>{movie.Rating}</td>");
+                    sb.AppendLine($"<td>{movie.Size}</td>");
+                    sb.AppendLine($"<td>{movie.FrameWidth}</td>");
+                    sb.AppendLine($"<td>{movie.FrameHeight}</td>");
+                    sb.AppendLine($"<td>{movie.TotalBitrate}</td>");
+                    sb.AppendLine($"<td>{movie.EncodingBitrate}</td>");
+                    sb.AppendLine("</tr>");
                 }
+                return sb.ToString();
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
 
             }
+            return string.Empty;
+        }
 
+        private string DataTableToJSONWithJSONNet(DataTable table)
+        {
+            string JSONString = string.Empty;
+            JSONString = JsonConvert.SerializeObject(table);
+            return JSONString;
+        }
+
+        private List<Movie> GetNotAddedMovie(List<Movie> database, List<Movie> folderE, List<Movie> folderF)
+        {
+            var listNotAddedFolderE = (from videoE in folderE
+                                       join videoDatabase in database
+                                       on videoE.Name equals videoDatabase.Name
+                                       select videoE).ToList();
+            return listNotAddedFolderE;
         }
 
         private List<Movie> GetMoviesFromDatabase()
@@ -228,248 +499,6 @@ namespace BrowseAndManageVideos_WEB.Controllers
 
             }
             return new Movie();
-        }
-
-        [HttpGet]
-        [Route("")]
-        public IActionResult GetMoviesNoParameter()
-        {
-            try
-            {
-                List<Movie> movies = _dataContext.Movies.Take(100).ToList();
-                ViewData["movies"] = movies;
-
-                return View("/Views/Movie/GetMovies.cshtml");
-            }
-            catch (Exception e)
-            {
-
-            }
-            return BadRequest("Error");
-        }
-
-        [HttpGet]
-        [Route("page={page}")]
-        public IActionResult GetMoviesWithPaging(int page)
-        {
-            try
-            {
-                // list
-                List<Movie> listAfterFilter = _dataContext.Movies.ToList();
-                // paging
-                int totalPage = listAfterFilter.Count / 100;
-                listAfterFilter = _dataContext.Movies.Skip(totalPage * (page - 1)).Take(100).ToList();
-                ViewData["movies"] = listAfterFilter;
-
-                return View("GetMovies.cshtml");
-            }
-            catch (Exception e)
-            {
-
-            }
-            return BadRequest("Error");
-        }
-
-        [HttpGet]
-        [Route("page={page}/search={search}")]
-        public IActionResult GetMoviesWidthSearch(int page, string search)
-        {
-            try
-            {
-                // list
-                List<Movie> listAfterFilter = _dataContext.Movies.Take(100).ToList();
-                // paging
-                int totalPage = listAfterFilter.Count / 100;
-                listAfterFilter = listAfterFilter.Skip(totalPage * (page - 1)).Take(100).ToList();
-                ViewData["movies"] = listAfterFilter;
-                return View("GetMovies.cshtml");
-            }
-            catch (Exception e)
-            {
-
-            }
-            return BadRequest("Error");
-        }
-
-        [HttpPost]
-        [Route("openfile={id}")]
-        public IActionResult OpenFile(int id)
-        {
-            try
-            {
-                Movie movie = _dataContext.Movies.FirstOrDefault(x => x.Id == id);
-                if (movie == null)
-                {
-                    ViewBag["openfileresult"].Message = "Can not find selected file!";
-                    return View("/Views/Movie/GetMovies.cshtml");
-                }
-                else
-                {
-                    if (movie.IsDeleted == true)
-                    {
-                        ViewBag["openfileresult"].Message = "File has been deleted ";
-                        return View("/Views/Movie/GetMovies.cshtml");
-                    }
-                    Process p = new Process();
-                    p.StartInfo = new ProcessStartInfo(movie.Path)
-                    {
-                        UseShellExecute = true
-                    };
-                    p.Start();
-                    ViewBag["openfileresult"].Message = "File openned";
-                    return View("/Views/Movie/GetMovies.cshtml");
-                }
-            }
-            catch (Exception e)
-            {
-                return BadRequest("Error");
-            }
-        }
-
-        [HttpGet]
-        [Route("movies/id")]
-        public List<Movie> Movies()
-        {
-            List<Movie> movies = new List<Movie>();
-            Debug.WriteLine(movies);
-            return movies;
-        }
-
-        [HttpGet]
-        [Route("movies/autoupdateall/{path}")]
-        public int AutoUpdateAll(string? path)
-        {
-            try
-            {
-                if (path == null)
-                {
-                    throw new FileNotFoundException("Path can not be null");
-                }
-                List<Movie> allMoviesInDatabase = GetMoviesFromDatabase();
-                List<Movie> allMoviesInFolder = GetMoviesFromFile(path);
-
-                return 0;
-            }
-            catch (FileNotFoundException fnfe)
-            {
-
-                return 0;
-            }
-            catch (Exception e)
-            {
-
-                return 0;
-            }
-        }
-
-        [HttpGet]
-        [Route("movies/insertall")]
-        public bool AutoUpdateAll()
-        {
-            try
-            {
-                List<Movie> allMoviesInFolderF = GetMoviesFromFile(@"F:\");
-                List<Movie> allMoviesInFolderE = GetMoviesFromFile(@"E:\");
-                List<Movie> allMoviesInDatabase = _dataContext.Movies.ToList();
-                List<Movie> folderENotInDatebase = allMoviesInFolderE.Except(allMoviesInDatabase).ToList();
-                List<Movie> folderFNotInDatebase = allMoviesInFolderF.Except(allMoviesInDatabase).ToList();
-                InsertMoviesToDatabase(folderENotInDatebase);
-                InsertMoviesToDatabase(folderFNotInDatebase);
-                return true;
-            }
-            catch (FileNotFoundException fnfe)
-            {
-
-                return false;
-            }
-            catch (Exception e)
-            {
-
-                return false;
-            }
-
-        }
-
-        private List<Movie> GetNotAddedMovie(List<Movie> database, List<Movie> folderE, List<Movie> folderF)
-        {
-            var listNotAddedFolderE = (from videoE in folderE
-                                       join videoDatabase in database
-                                       on videoE.Name equals videoDatabase.Name
-                                       select videoE).ToList();
-            return listNotAddedFolderE;
-        }
-
-        [HttpPost]
-        [Route("movies/save")]
-        public ActionResult Index()
-        {
-            Debug.WriteLine("here 2");
-            return View();
-        }
-
-        //[Route("Delete")]
-        //public ActionResult Delete()
-        //{
-        //    Debug.WriteLine("here 3");
-        //    return View();
-        //}
-
-        private string MakeDataTable(List<Movie> movies)
-        {
-            try
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine("<table>");
-                sb.AppendLine("" +
-                    "<tr>" +
-                    "<th>Checkbox</th>" +
-                    "<th>ID</th>" +
-                    "<th>Name</th>" +
-                    "<th>Path</th>" +
-                    "<th>Description</th>" +
-                    "<th>Actor</th>" +
-                    "<th>ContentType</th>" +
-                    "<th>IsDeleted</th>" +
-                    "<th>Rating</th>" +
-                    "<th>Size</th>" +
-                    "<th>FrameWidth</th>" +
-                    "<th>FrameHeight</th>" +
-                    "<th>TotalBitrate</th>" +
-                    "<th>EncodingBitrate</th>" +
-                    "</tr>");
-                foreach (Movie movie in movies)
-                {
-                    sb.AppendLine("<tr>");
-                    sb.AppendLine($"<td><input type=\"checkbox\"></td>");
-                    sb.AppendLine($"<td>{movie.Id}</td>");
-                    sb.AppendLine($"<td>{movie.Name}</td>");
-                    sb.AppendLine($"<td>{movie.Path}</td>");
-                    sb.AppendLine($"<td>{movie.Description}</td>");
-                    sb.AppendLine($"<td>{movie.Actor}</td>");
-                    sb.AppendLine($"<td>{movie.ContentType}</td>");
-                    sb.AppendLine($"<td>{movie.IsDeleted}</td>");
-                    sb.AppendLine($"<td>{movie.Rating}</td>");
-                    sb.AppendLine($"<td>{movie.Size}</td>");
-                    sb.AppendLine($"<td>{movie.FrameWidth}</td>");
-                    sb.AppendLine($"<td>{movie.FrameHeight}</td>");
-                    sb.AppendLine($"<td>{movie.TotalBitrate}</td>");
-                    sb.AppendLine($"<td>{movie.EncodingBitrate}</td>");
-                    sb.AppendLine("</tr>");
-                }
-                return sb.ToString();
-            }
-            catch (Exception ex)
-            {
-
-            }
-            return string.Empty;
-        }
-
-        private string DataTableToJSONWithJSONNet(DataTable table)
-        {
-            string JSONString = string.Empty;
-            JSONString = JsonConvert.SerializeObject(table);
-            return JSONString;
         }
     }
 }

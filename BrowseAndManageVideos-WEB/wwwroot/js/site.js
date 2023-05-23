@@ -1,24 +1,101 @@
-﻿// Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
-// for details on configuring this project to bundle and minify static web assets.
-
-// Write your JavaScript code.
-
-
-function init() {
+﻿function init() {
     //document.getElementById("btn-search").onclick = async function () { search() };
     //document.getElementById("btn-open-file").onclick = function () { openFileInDirectory() };
     document.getElementById("checkbox-all").onclick = function () { checkAll() };
-<<<<<<< HEAD
-    
-=======
-
->>>>>>> e8e9281
     resizableGrid(document.getElementById("movie-table"));
-    callDataDefault();
+    processPagingUI();
+
 }
 
-function search() {
-    console.log("search");
+function processPaging(event) {
+    var page = document.querySelectorAll('[data]');
+    var search = document.getElementById("text-search").value;
+    var currentPage = event.getAttribute("data");
+    switch (page) {
+        case "first":
+            (search == "") ? getMovieNoSearch(1) : getMovieWithSearch(1, search);
+
+            break;
+        case "backward":
+            if (currentPage == 1) {
+                return;
+            }
+            (search == "") ? getMovieNoSearch(currentPage) : getMovieWithSearch(currentPage, search);
+            break;
+        case "forward":
+            (search == "") ? getMovieNoSearch(currentPage) : getMovieWithSearch(currentPage, search);
+            break;
+        case "last":
+            if (currentPage == numberOfPages) {
+                return;
+            }
+            (search == "") ? getMovieNoSearch(numberOfPages) : getMovieWithSearch(numberOfPages, search);
+            break;
+        default:
+            (search == "") ? getMovieNoSearch(currentPage) : getMovieWithSearch(currentPage, search);
+    }
+}
+
+function processPagingUI() {
+    var numberOfPages = document.getElementsByName("paging").length - 4;
+    var currentPage = document.getElementsByClassName("active")[0].getAttribute("data");
+    var maxPage = 3;
+    if (currentPage == 1) {
+        var first = document.querySelector('[data="first"]').setAttribute("style", "background-color: #BCBCBC");
+        var backward = document.querySelector('[data="backward"]').setAttribute("style", "background-color: #BCBCBC");
+        if (numberOfPages > currentPage + maxPage) {
+            for (let i = maxPage + 2; i < numberOfPages + 1; i++) {
+                console.log(document.querySelector('[data="' + i + '"]').setAttribute("style", "display: none"));
+            }
+        }
+    }
+    for (let i = 2; i < numberOfPages; i++) {
+
+    }
+
+    if (currentPage == numberOfPages) {
+        var last = document.querySelector('[data="last"]').setAttribute("style", "background-color: #BCBCBC");
+        var forward = document.querySelector('[data="forward"]').setAttribute("style", "background-color: #BCBCBC");
+    }
+    
+}
+
+function getMovieNoSearch(page) {
+    fetch(`https://localhost:44378/Movie/${page}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+    })
+        .then(response => {
+            if (response.ok) {
+                console.log('File opened successfully.');
+            } else {
+                console.error('An error occurred while opening the file.');
+            }
+        })
+        .catch(error => {
+            console.error('An error occurred:', error);
+        });
+}
+
+function getMovieWithSearch(page, param) {
+    fetch(`https://localhost:44378/Movie/${page}/s=${param}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+    })
+        .then(response => {
+            if (response.ok) {
+                console.log('File opened successfully.');
+            } else {
+                console.error('An error occurred while opening the file.');
+            }
+        })
+        .catch(error => {
+            console.error('An error occurred:', error);
+        });
 }
 
 function checkAll() {
@@ -38,45 +115,53 @@ function processOption(event) {
             // code block
             break;
         case "open":
-            // code block
-<<<<<<< HEAD
-            fetch(`https://localhost:44378/movies/openfile=${event.target.id.replace('options-', '') }`, {
-=======
-            fetch(`https://localhost:44378/movies/openfile=${event.target.id.replace('options-', '')}`, {
->>>>>>> e8e9281
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+            var movieID = event.target.id.replace('options-', '');
+            fetch(`https://localhost:44378/Movie/Openfile?id=${movieID}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                },
             })
-                .then(response => {
+            .then(response => {
                     if (response.ok) {
                         console.log('File opened successfully.');
                     } else {
                         console.error('An error occurred while opening the file.');
                     }
                 })
-                .catch(error => {
+            .catch(error => {
                     console.error('An error occurred:', error);
-                });
-<<<<<<< HEAD
-            
-=======
-
->>>>>>> e8e9281
+             });
+            document.getElementById(event.target.id).selectedIndex = "0";
             break;
         case "edit":
             // code block
             var movieID = event.target.id.replace('options-', '');
-            let newName = prompt("Update name/ path for Movie ID = " + movieID);
+            var newName = prompt("Update name/ path for Movie ID = " + movieID);
             if (newName == null || newName == "") {
-                alert("User cancelled the prompt.");
+                alert("File name can not be null!");
             } else {
-                alert("sucess");
+                fetch(`https://localhost:44378/Movie/Update`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        "Id": movieID,
+                        "Name": newName
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Handle the response data here
+                        console.log(data);
+                    })
+                    .catch(error => {
+                        // Handle any errors that occur during the request
+                        console.error('Error:', error);
+                    });
             }
-            break;
-        case "select":
-            // code block
+            document.getElementById(event.target.id).selectedIndex = "0";
             break;
         case "delete":
             // code block
@@ -100,30 +185,17 @@ function processOptionSetting(event) {
                     'Content-Type': 'application/json'
                 }
             })
-<<<<<<< HEAD
             .then(response => {
                 if (response.ok) {
                     console.log('File opened successfully.');
                 } else {
                     console.error('An error occurred while opening the file.');
                 }
-            })
+                })
             .catch(error => {
                 console.error('An error occurred:', error);
             });
-=======
-                .then(response => {
-                    if (response.ok) {
-                        console.log('File opened successfully.');
-                    } else {
-                        console.error('An error occurred while opening the file.');
-                    }
-                })
-                .catch(error => {
-                    console.error('An error occurred:', error);
-                });
->>>>>>> e8e9281
-
+            document.getElementById("option-setting").selectedIndex = "0";
             break;
         case "refresh":
             var text = document.getElementById("text-search").value();
@@ -150,12 +222,6 @@ function processOptionSetting(event) {
     }
 
 }
-
-function callDataDefault() {
-
-}
-
-
 
 function resizableGrid(table) {
     var row = table.getElementsByTagName('tr')[0],
@@ -245,11 +311,13 @@ function resizableGrid(table) {
     }
 };
 
+function paging (){
+    const nextButton = document.getElementById("nextnext-page");
+    const prevButton = document.getElementById("prev-page");
+
+
+}
+
 window.onload = function () {
     init();
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> e8e9281
-
