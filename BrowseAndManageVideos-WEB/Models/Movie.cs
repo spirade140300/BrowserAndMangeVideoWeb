@@ -17,5 +17,6 @@ namespace BrowseAndManageVideos_WEB.Models
         public string? FrameHeight { get; set; }
         public string? TotalBitrate { get; set; }
         public string? EncodingBitrate { get; set; }
+        public string AcessTime { get; set; }
     }
 }

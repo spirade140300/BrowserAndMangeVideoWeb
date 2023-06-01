@@ -24,6 +24,9 @@ using System.Text.Json;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using System.Linq.Expressions;
 using BrowseAndManageVideos_WEB.Utils;
+using static Microsoft.WindowsAPICodePack.Shell.PropertySystem.SystemProperties.System;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace BrowseAndManageVideos_WEB.Controllers
 {
@@ -40,15 +43,24 @@ namespace BrowseAndManageVideos_WEB.Controllers
 
         [HttpGet]
         [Route("")]
-        public IActionResult GetMoviesNoParameter()
+        public IActionResult GetMoviesNoParameter([FromQuery]int stateID, int count)
         {
             try
             {
-                List<Movie> movies = _dataContext.Movies.Take(100).ToList();
-                int totalPage = _dataContext.Movies.ToList().Count / 100;
-                ViewData["pages"] = totalPage;
+                List<Movie> movies = new List<Movie>();
+                if (stateID == 0)
+                {
+                    movies = _dataContext.Movies.OrderBy(m => m.Name).Take(count).ToList();
+                }
+                else if(stateID == 1)
+                {
+                    movies = _dataContext.Movies.Where(m => m.IsDeleted == false).OrderBy(m => m.Name).Take(count).ToList();
+                }
+                else if(stateID == 2)
+                {
+                    movies = _dataContext.Movies.Where(m => m.IsDeleted == true).OrderBy(m => m.Name).Take(count).ToList();
+                }
                 ViewData["movies"] = movies;
-                ViewData["currentpage"] = 1;
                 WriteLogFile.WriteLog("Information-Controller: GetMoviesNoParameter");
                 return View("/Views/Movie/Index.cshtml");
             }
@@ -60,45 +72,25 @@ namespace BrowseAndManageVideos_WEB.Controllers
         }
 
         [HttpGet]
-        [Route("{Page}")]
-        public IActionResult GetMoviesWithPaging([FromRoute] int page)
+        [Route("Search/{search}")]
+        public IActionResult GetMoviesWidthSearch([FromRoute] string search)
         {
             try
             {
-                // list
-                List<Movie> listAfterFilter = _dataContext.Movies.ToList();
-                // paging
-                int totalPage = listAfterFilter.Count / 100;
-                listAfterFilter = _dataContext.Movies.Skip(100 * (page - 1)).Take(100).ToList();
-                ViewData["movies"] = listAfterFilter;
-                ViewData["pages"] = totalPage;
-                ViewData["currentpage"] = page;
-                WriteLogFile.WriteLog("Information-Controller: GetMoviesWithPaging");
-                return RedirectToAction("/Views/Movie/Index.cshtml");
-            }
-            catch (Exception e)
-            {
-                WriteLogFile.WriteLog("Error-Controller: GetMoviesWithPaging " + e.Message);
-            }
-            return BadRequest("Error");
-        }
-
-        [HttpGet]
-        [Route("{page}/s={search}")]
-        public IActionResult GetMoviesWidthSearch(int page, string search)
-        {
-            try
-            {
-                // list
-                List<Movie> listAfterFilter = _dataContext.Movies.Take(100).ToList();
-                // paging
-                int totalPage = listAfterFilter.Count / 100;
-                listAfterFilter = listAfterFilter.Skip(totalPage * (page - 1)).Take(100).ToList();
-                ViewData["movies"] = listAfterFilter;
-                ViewData["pages"] = totalPage;
-                ViewData["currentpage"] = page;
-                WriteLogFile.WriteLog("Information-Controller: GetMoviesWidthSearch");
-                return View("/Views/Movie/Index.cshtml");
+                if (search != "")
+                {
+                    // list
+                    List<Movie> listAfterFilter = _dataContext.Movies.Where(m => m.Name.ToLower().Contains(search.ToLower()) || m.Actor.ToLower().Contains(search.ToLower()) || m.Description.ToLower().Contains(search.ToLower())).OrderBy(m => m.Name).ToList();
+                    // paging
+                    ViewData["movies"] = listAfterFilter;
+                    WriteLogFile.WriteLog("Information-Controller: GetMoviesWidthSearch");
+                    return PartialView("_MovieDataPartial", listAfterFilter);
+                }
+                else
+                {
+                    WriteLogFile.WriteLog("Warning-Controller: UpdateMovie - Data receive error");
+                }
+                
             }
             catch (Exception e)
             {
@@ -109,30 +101,59 @@ namespace BrowseAndManageVideos_WEB.Controllers
 
 
         [HttpPatch]
-        [Route("Update")]
+        [Route("{Update}")]
         public IActionResult UpdateMovie([FromBody] JsonElement data)
         {
             try
             {
                 //var newdetail = JsonConvert.DeserializeObject<UdpdateMovieNameData>(data);
-                UdpdateMovieNameData? udpdateMovieNameData = JsonSerializer.Deserialize<UdpdateMovieNameData>(data);
-                if(udpdateMovieNameData != null)
+                UpdateMovieNameData? updateMovieNameData = JsonSerializer.Deserialize<UpdateMovieNameData>(data);
+                if(updateMovieNameData != null)
                 {
-                    var id = udpdateMovieNameData.Id;
-                    var name = udpdateMovieNameData.Name;
+                    var id = updateMovieNameData.Id;
+                    var name = updateMovieNameData.Name;
+                    var description = updateMovieNameData.Description;
+                    var actor = updateMovieNameData.Actor;
+                    var rating = updateMovieNameData.Rating;
                     Movie movie = _dataContext.Movies.Where(m => m.Id == int.Parse(id)).FirstOrDefault();
                     if(movie != null)
                     {
-                        var oldPath = movie.Path;
-                        string directory = Path.GetDirectoryName(movie.Path);
-                        string extension = Path.GetExtension(movie.Path);
-                        string newPath = Path.Combine(directory, name + extension);
-                        movie.Name = name;
-                        movie.Path = newPath;
+                        var oldPath = "";
+                        var newPath = "";
+                        // set name
+                        if (movie.Name != name) {
+                            movie.Name = name;
+                            // set path
+                            oldPath = movie.Path;
+                            string directory = Path.GetDirectoryName(movie.Path);
+                            string extension = Path.GetExtension(movie.Path);
+                            newPath = Path.Combine(directory, name + extension);
+                            movie.Path = newPath;
+                        }
+                        
+                        // set description
+                        if(description != movie.Description)
+                        {
+                            movie.Description = description;
+                        }
+
+                        if (actor != movie.Actor)
+                        {
+                            movie.Actor = actor;
+                        }
+
+                        if (rating != movie.Rating)
+                        {
+                            movie.Rating = rating;
+                        }
+                        movie.AcessTime = DateTime.Now.ToString();
                         _dataContext.Movies.Update(movie);
                         _dataContext.SaveChanges();
-                        System.IO.File.Move(oldPath, newPath);
-                        WriteLogFile.WriteLog("Information-Controller: UpdateMovie");
+                        if (oldPath != "")
+                        {
+                            System.IO.File.Move(oldPath, newPath);
+                        }
+                        WriteLogFile.WriteLog("Information-Controller: UpdateMovie - ID = " + movie.Id);
                     }
                     else
                     {
@@ -148,7 +169,8 @@ namespace BrowseAndManageVideos_WEB.Controllers
             {
                 WriteLogFile.WriteLog("Error-Controller: UpdateMovie " + e.Message);
             }
-            return View();
+            List<Movie> movies = _dataContext.Movies.OrderBy(m => m.Name).Take(500).ToList();
+            return PartialView("_MovieDataPartial", movies);
         }
 
         [HttpPost]
@@ -165,13 +187,16 @@ namespace BrowseAndManageVideos_WEB.Controllers
                         return;
                     }
                     Process p = new Process();
+                    movie.AcessTime = DateTime.Now.ToString();
+                    _dataContext.Update(movie);
+                    _dataContext.SaveChanges();
                     p.StartInfo = new ProcessStartInfo(movie.Path)
                     {
                         UseShellExecute = true
                     };
                     p.Start();
                 }
-                WriteLogFile.WriteLog("Information-Controller: OpenFile");
+                WriteLogFile.WriteLog("Information-Controller: OpenFile - FileName: " + movie.Name);
             }
             catch (Exception e)
             {
@@ -180,12 +205,20 @@ namespace BrowseAndManageVideos_WEB.Controllers
         }
 
         [HttpGet]
-        [Route("Movies/id")]
-        public List<Movie> Movies()
+        [Route("{id}")]
+        public Movie GetMovie([FromRoute] string id)
         {
-            List<Movie> movies = new List<Movie>();
-            Debug.WriteLine(movies);
-            return movies;
+            try
+            {
+                Movie movie = _dataContext.Movies.Where(m => m.Id.Equals(int.Parse(id))).FirstOrDefault();
+                WriteLogFile.WriteLog("Information-Controller: GetMovie");
+                return movie;
+            }
+            catch (Exception e)
+            {
+                WriteLogFile.WriteLog("Error-Controller: GetMovie " + e.Message);
+            }
+            return new Movie();
         }
 
         [HttpGet]
@@ -216,48 +249,102 @@ namespace BrowseAndManageVideos_WEB.Controllers
         }
 
         [HttpGet]
-        [Route("Movies/Insertall")]
-        public bool AutoUpdateAll()
+        [Route("Insertall")]
+        public void AutoUpdateAll()
         {
             try
             {
-                List<Movie> allMoviesInFolderF = GetMoviesFromFile(@"F:\");
-                List<Movie> allMoviesInFolderE = GetMoviesFromFile(@"E:\");
+                List<Movie> allMoviesInFolder = GetMoviesFromFile(@"F:\");
+                allMoviesInFolder.AddRange(GetMoviesFromFile(@"E:\").ToList());
                 List<Movie> allMoviesInDatabase = _dataContext.Movies.ToList();
-                List<Movie> folderENotInDatebase = allMoviesInFolderE.Except(allMoviesInDatabase).ToList();
-                List<Movie> folderFNotInDatebase = allMoviesInFolderF.Except(allMoviesInDatabase).ToList();
-                InsertMoviesToDatabase(folderENotInDatebase);
-                InsertMoviesToDatabase(folderFNotInDatebase);
-                return true;
+                foreach(Movie movie in allMoviesInFolder)
+                {
+                    Debug.WriteLine("Current check item: " + movie.Name);
+                    Movie databaseMovie = allMoviesInDatabase.Where(m => m.Name == movie.Name).FirstOrDefault();
+                    if (databaseMovie == null)
+                    {
+                        _dataContext.Movies.Add(movie);
+                        _dataContext.SaveChanges();
+                    }
+                    else
+                    {
+                        if(databaseMovie.Name != movie.Name || databaseMovie.Path != movie.Path || databaseMovie.Size != movie.Size || databaseMovie.IsDeleted != movie.IsDeleted)
+                        {
+                            databaseMovie.Name = movie.Name;
+                            databaseMovie.Path = movie.Path;
+                            databaseMovie.Size = movie.Size;
+                            databaseMovie.IsDeleted = movie.IsDeleted;
+                            _dataContext.Movies.Update(databaseMovie);
+                            _dataContext.SaveChanges();
+                        }
+                    }
+                }
             }
             catch (FileNotFoundException fnfe)
             {
-
-                return false;
+                WriteLogFile.WriteLog("Error-Controller FileNotFoundException: AutoUpdateAll " + fnfe.Message);
             }
             catch (Exception e)
             {
-
-                return false;
+                WriteLogFile.WriteLog("Error-Controller Exception: AutoUpdateAll " + e.Message);
             }
 
         }
 
-        [HttpPost]
-        [Route("movies/save")]
-        public ActionResult Index()
+        [HttpDelete]
+        [Route("Delete")]
+        public ActionResult DeleteMovie([FromQuery] int id)
         {
-            Debug.WriteLine("here 2");
-            return View();
+            try
+            {
+                List<Movie> movies = _dataContext.Movies.ToList();
+                Movie movie = movies.Where(m => m.Id == id).FirstOrDefault();
+                if (movie != null)
+                {
+                    if (movie.IsDeleted == true)
+                    {
+                        return PartialView("_MovieDataPartial", movies);
+                    }
+                    else
+                    {
+                        string currentName = movie.Name;
+                        string currentPath = movie.Path;
+                        string directory = Path.GetDirectoryName(currentPath);
+                        string delete = @".deleted";
+                        string newPath = directory + Path.Combine(delete, currentName);
+
+                        movie.Path = newPath;
+                        movie.ContentType = "";
+                        movie.IsDeleted = true;
+                        movie.Rating = "";
+                        movie.Size = "0";
+                        movie.EncodingBitrate = "";
+                        movie.FrameWidth = "";
+                        movie.FrameHeight = "";
+                        movie.TotalBitrate = "";
+                        movie.AcessTime = "";
+                        _dataContext.Movies.Update(movie);
+                        _dataContext.SaveChanges();
+
+                        System.IO.File.Delete(currentPath);
+                        System.IO.File.Create(newPath);
+                        movies = _dataContext.Movies.ToList();
+                        movie = movies.Where(m => m.Id == id).FirstOrDefault();
+                        WriteLogFile.WriteLog("Information-Controller: DeleteMovie - Name: " + movie.Name);
+                        return PartialView("_MovieDataPartial", movies);
+                    }
+                    
+                }
+                WriteLogFile.WriteLog("Error-Controller: Delete");
+            }
+            catch (Exception e)
+            {
+                WriteLogFile.WriteLog("Error-Controller: Delete " + e.Message);
+            }
+            return PartialView("_MovieDataPartial");
         }
 
-        //[Route("Delete")]
-        //public ActionResult Delete()
-        //{
-        //    Debug.WriteLine("here 3");
-        //    return View();
-        //}
-
+        // Fast read file with no detail
         private List<Movie> GetMoviesFromFile(string folderPath)
         {
             try
@@ -270,61 +357,27 @@ namespace BrowseAndManageVideos_WEB.Controllers
 
                 foreach (var file in readFiles.Select((value, i) => new { i, value }))
                 {
-                    ShellObject shellItem = ShellObject.FromParsingName(file.value);
-                    ShellPropertyCollection properties = shellItem.Properties.DefaultPropertyCollection;
+                    FileInfo details= new FileInfo(file.value);
                     Movie movie = new Movie();
                     if (file.value.Contains(".mp4") || file.value.Contains(".ts"))
                     {
-                        //Name
-                        movie.Name = properties.Where(prop => prop.CanonicalName == "System.ItemNameDisplayWithoutExtension").FirstOrDefault() == null ? "" : properties["System.ItemNameDisplayWithoutExtension"].ValueAsObject.ToString();
-                        //path
-                        movie.Path = properties.Where(prop => prop.CanonicalName == "System.ItemFolderPathDisplay").FirstOrDefault() == null ? "" : file.value;
-                        // Description
-                        movie.Description = "";
-                        //actor
-                        movie.Actor = properties.Where(prop => prop.CanonicalName == "System.Music.DisplayArtist").FirstOrDefault() == null ? "" : properties["System.Music.DisplayArtist"].ValueAsObject.ToString();
-                        //FrameWidth
-                        movie.FrameWidth = properties.Where(prop => prop.CanonicalName == "System.Video.FrameWidth").FirstOrDefault() == null ? "" : properties["System.Video.FrameWidth"].ValueAsObject.ToString();
-                        //FrameHeight
-                        movie.FrameHeight = properties.Where(prop => prop.CanonicalName == "System.Video.FrameHeight").FirstOrDefault() == null ? "" : properties["System.Video.FrameHeight"].ValueAsObject.ToString();
-                        //ContentType
-                        movie.ContentType = properties.Where(prop => prop.CanonicalName == "System.ContentType").FirstOrDefault() == null ? "" : properties["System.ContentType"].ValueAsObject.ToString();
-                        //IsDeleted
+                        movie.Path = details.FullName;
+                        movie.Name = System.IO.Path.GetFileNameWithoutExtension(details.Name);
+                        movie.Size = details.Length.ToString();
+                        movie.AcessTime = DateTime.MinValue.ToString();
                         movie.IsDeleted = false;
-                        //Rating
-                        movie.Rating = properties.Where(prop => prop.CanonicalName == "System.RatingText").FirstOrDefault() == null ? "" : properties["System.RatingText"].ValueAsObject.ToString();
-                        //TotalBitrate
-                        movie.TotalBitrate = properties.Where(prop => prop.CanonicalName == "System.Video.EncodingBitrate").FirstOrDefault() == null ? "" : properties["System.Video.EncodingBitrate"].ValueAsObject.ToString();
-                        //EncodingBitrate
-                        movie.EncodingBitrate = properties.Where(prop => prop.CanonicalName == "System.Video.TotalBitrate").FirstOrDefault() == null ? "" : properties["System.Video.TotalBitrate"].ValueAsObject.ToString();
-                        //Size
-                        movie.Size = properties["System.Size"].ValueAsObject == null ? "" : properties["System.Size"].ValueAsObject.ToString();
                     }
-                    else if (int.Parse(properties["System.Size"].ValueAsObject.ToString()) == 0)
+                    else if (details.Length == 0)
                     {
-                        movie.Name = properties.Where(prop => prop.CanonicalName == "System.ItemNameDisplayWithoutExtension").FirstOrDefault() == null ? "" : properties["System.ItemNameDisplayWithoutExtension"].ValueAsObject.ToString();
-                        //path
-                        movie.Path = properties.Where(prop => prop.CanonicalName == "System.ItemFolderNameDisplay").FirstOrDefault() == null ? "" : file.value;
-                        // Description
-                        movie.Description = "";
-                        //actor
-                        movie.Actor = properties.Where(prop => prop.CanonicalName == "System.Music.DisplayArtist").FirstOrDefault() == null ? "" : properties["System.Music.DisplayArtist"].ValueAsObject.ToString();
-                        //FrameWidth
-                        movie.FrameWidth = properties.Where(prop => prop.CanonicalName == "System.Video.FrameWidth").FirstOrDefault() == null ? "" : properties["System.Video.FrameWidth"].ValueAsObject.ToString();
-                        //FrameHeight
-                        movie.FrameHeight = properties.Where(prop => prop.CanonicalName == "System.Video.FrameHeight").FirstOrDefault() == null ? "" : properties["System.Video.FrameHeight"].ValueAsObject.ToString();
-                        //ContentType
-                        movie.ContentType = properties.Where(prop => prop.CanonicalName == "System.ContentType").FirstOrDefault() == null ? "" : properties["System.ContentType"].ValueAsObject.ToString();
-                        //IsDeleted
+                        movie.Path = details.FullName;
+                        movie.Name = System.IO.Path.GetFileNameWithoutExtension(details.Name);
+                        movie.Size = "0";
                         movie.IsDeleted = true;
-                        //Rating
-                        movie.Rating = properties.Where(prop => prop.CanonicalName == "System.RatingText").FirstOrDefault() == null ? "" : properties["System.RatingText"].ValueAsObject.ToString();
-                        //TotalBitrate
-                        movie.TotalBitrate = properties.Where(prop => prop.CanonicalName == "System.Video.EncodingBitrate").FirstOrDefault() == null ? "" : properties["System.Video.EncodingBitrate"].ValueAsObject.ToString();
-                        //EncodingBitrate
-                        movie.EncodingBitrate = properties.Where(prop => prop.CanonicalName == "System.Video.TotalBitrate").FirstOrDefault() == null ? "" : properties["System.Video.TotalBitrate"].ValueAsObject.ToString();
-                        //Size
-                        movie.Size = properties["System.Size"].ValueAsObject == null ? "" : properties["System.Size"].ValueAsObject.ToString();
+                        movie.AcessTime = DateTime.MinValue.ToString();
+                        movie.EncodingBitrate = null;
+                        movie.FrameWidth = null;
+                        movie.FrameHeight = null;
+                        movie.TotalBitrate = null;
                     }
                     else
                     {
@@ -341,6 +394,93 @@ namespace BrowseAndManageVideos_WEB.Controllers
             }
             return new List<Movie>();
         }
+
+        // Slow read file with detail
+        //private List<Movie> GetMoviesFromFile(string folderPath)
+        //{
+        //    try
+        //    {
+        //        //Số file đã đọc
+        //        List<string> readFiles = EnumerateFiles(folderPath, "*.*").ToList();
+        //        readFiles.AddRange(EnumerateFiles(Path.Combine(folderPath, ".deleted"), "*.*").ToList());
+        //        //Khai báo list video để lưu
+        //        List<Movie> readMovies = new List<Movie>();
+
+        //        foreach (var file in readFiles.Select((value, i) => new { i, value }))
+        //        {
+        //            ShellObject shellItem = ShellObject.FromParsingName(file.value);
+        //            ShellPropertyCollection properties = shellItem.Properties.DefaultPropertyCollection;
+        //            Movie movie = new Movie();
+        //            if (file.value.Contains(".mp4") || file.value.Contains(".ts"))
+        //            {
+        //                //Name
+        //                movie.Name = properties.Where(prop => prop.CanonicalName == "System.ItemNameDisplayWithoutExtension").FirstOrDefault() == null ? "" : properties["System.ItemNameDisplayWithoutExtension"].ValueAsObject.ToString();
+        //                //path
+        //                movie.Path = properties.Where(prop => prop.CanonicalName == "System.ItemFolderPathDisplay").FirstOrDefault() == null ? "" : file.value;
+        //                // Description
+        //                movie.Description = "";
+        //                //actor
+        //                movie.Actor = properties.Where(prop => prop.CanonicalName == "System.Music.DisplayArtist").FirstOrDefault() == null ? "" : properties["System.Music.DisplayArtist"].ValueAsObject.ToString();
+        //                //FrameWidth
+        //                movie.FrameWidth = properties.Where(prop => prop.CanonicalName == "System.Video.FrameWidth").FirstOrDefault() == null ? "" : properties["System.Video.FrameWidth"].ValueAsObject.ToString();
+        //                //FrameHeight
+        //                movie.FrameHeight = properties.Where(prop => prop.CanonicalName == "System.Video.FrameHeight").FirstOrDefault() == null ? "" : properties["System.Video.FrameHeight"].ValueAsObject.ToString();
+        //                //ContentType
+        //                movie.ContentType = properties.Where(prop => prop.CanonicalName == "System.ContentType").FirstOrDefault() == null ? "" : properties["System.ContentType"].ValueAsObject.ToString();
+        //                //IsDeleted
+        //                movie.IsDeleted = false;
+        //                //Rating
+        //                movie.Rating = properties.Where(prop => prop.CanonicalName == "System.RatingText").FirstOrDefault() == null ? "" : properties["System.RatingText"].ValueAsObject.ToString();
+        //                //TotalBitrate
+        //                movie.TotalBitrate = properties.Where(prop => prop.CanonicalName == "System.Video.EncodingBitrate").FirstOrDefault() == null ? "" : properties["System.Video.EncodingBitrate"].ValueAsObject.ToString();
+        //                //EncodingBitrate
+        //                movie.EncodingBitrate = properties.Where(prop => prop.CanonicalName == "System.Video.TotalBitrate").FirstOrDefault() == null ? "" : properties["System.Video.TotalBitrate"].ValueAsObject.ToString();
+        //                //Size
+        //                movie.Size = properties["System.Size"].ValueAsObject == null ? "" : properties["System.Size"].ValueAsObject.ToString();
+        //                movie.AcessTime = "";
+        //            }
+        //            else if (int.Parse(properties["System.Size"].ValueAsObject.ToString()) == 0)
+        //            {
+        //                movie.Name = properties.Where(prop => prop.CanonicalName == "System.ItemNameDisplayWithoutExtension").FirstOrDefault() == null ? "" : properties["System.ItemNameDisplayWithoutExtension"].ValueAsObject.ToString();
+        //                //path
+        //                movie.Path = properties.Where(prop => prop.CanonicalName == "System.ItemFolderNameDisplay").FirstOrDefault() == null ? "" : file.value;
+        //                // Description
+        //                movie.Description = "";
+        //                //actor
+        //                movie.Actor = properties.Where(prop => prop.CanonicalName == "System.Music.DisplayArtist").FirstOrDefault() == null ? "" : properties["System.Music.DisplayArtist"].ValueAsObject.ToString();
+        //                //FrameWidth
+        //                movie.FrameWidth = properties.Where(prop => prop.CanonicalName == "System.Video.FrameWidth").FirstOrDefault() == null ? "" : properties["System.Video.FrameWidth"].ValueAsObject.ToString();
+        //                //FrameHeight
+        //                movie.FrameHeight = properties.Where(prop => prop.CanonicalName == "System.Video.FrameHeight").FirstOrDefault() == null ? "" : properties["System.Video.FrameHeight"].ValueAsObject.ToString();
+        //                //ContentType
+        //                movie.ContentType = properties.Where(prop => prop.CanonicalName == "System.ContentType").FirstOrDefault() == null ? "" : properties["System.ContentType"].ValueAsObject.ToString();
+        //                //IsDeleted
+        //                movie.IsDeleted = true;
+        //                //Rating
+        //                movie.Rating = properties.Where(prop => prop.CanonicalName == "System.RatingText").FirstOrDefault() == null ? "" : properties["System.RatingText"].ValueAsObject.ToString();
+        //                //TotalBitrate
+        //                movie.TotalBitrate = properties.Where(prop => prop.CanonicalName == "System.Video.EncodingBitrate").FirstOrDefault() == null ? "" : properties["System.Video.EncodingBitrate"].ValueAsObject.ToString();
+        //                //EncodingBitrate
+        //                movie.EncodingBitrate = properties.Where(prop => prop.CanonicalName == "System.Video.TotalBitrate").FirstOrDefault() == null ? "" : properties["System.Video.TotalBitrate"].ValueAsObject.ToString();
+        //                //Size
+        //                movie.Size = properties["System.Size"].ValueAsObject == null ? "" : properties["System.Size"].ValueAsObject.ToString();
+        //                movie.AcessTime = "";
+        //            }
+        //            else
+        //            {
+        //                continue;
+        //            }
+        //            readMovies.Add(movie);
+        //            Debug.WriteLine("Load file: " + movie.Name + ". Position: " + file.i + " / " + readFiles.Count);
+        //        }
+        //        return readMovies;
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Console.WriteLine(e.Message);
+        //    }
+        //    return new List<Movie>();
+        //}
 
         private string MakeDataTable(List<Movie> movies)
         {

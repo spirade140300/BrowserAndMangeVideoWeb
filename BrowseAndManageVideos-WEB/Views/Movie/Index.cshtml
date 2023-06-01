@@ -8,7 +8,6 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width" />
-    <link rel="stylesheet" href="/wwwroot/css/GetMovies.css">
 </head>
 <body>
     <div class="utility">
@@ -16,6 +15,9 @@
             <p class="inline">Search: </p>
             <input type="text" class="text-input inline" id="text-search" title="Search..." placeholder="Search..." />
             <button class="btn inline" id="btn-search" role="button" style="margin-bottom: 3px">Search</button>
+        </div>
+        <div class="inline">
+            
         </div>
         <div class="inline float-right">
             <select class="select" id="option-setting" onchange="processOptionSetting(event)">
@@ -26,61 +28,41 @@
         </div>
     </div>
     <div class="table-container">
-        <table id="movie-table" class="table">
-            <tr>
-                <th><input type="checkbox" id="checkbox-all"></th>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Path</th>
-                <th>Actor</th>
-                <th>Width</th>
-                <th>Height</th>
-                <th>ContentType</th>
-                <th>Rating</th>
-                <th>TotalBitrate</th>
-                <th>EncodingBitrate</th>
-                <th>Size</th>
-                <th>Deleted</th>
-                <th>Options</th>
-            </tr>
-            @foreach (var movie in movies )
-            {
-                <tr>
-                    <th><input type="checkbox" name="table-checkbox"></th>
-                    <th>@movie.Id</th>
-                    <th>@movie.Name</th>
-                    <th>@movie.Path</th>
-                    <th>@movie.Actor</th>
-                    <th>@movie.FrameWidth</th>
-                    <th>@movie.FrameHeight</th>
-                    <th>@movie.ContentType</th>
-                    <th>@movie.Rating</th>
-                    <th>@movie.TotalBitrate</th>
-                    <th>@movie.EncodingBitrate</th>
-                    <th>@movie.Size</th>
-                    <th>@movie.IsDeleted</th>
-                    <th>
-                        <select name="options" id="options-@movie.Id" onchange="processOption(event)" class="select">
-                            <option value="none">--options--</option>
-                            <option value="open">open</option>
-                            <option value="edit">edit</option>
-                            <option value="delete">delete</option>
-                        </select>
-                    </th>
-                </tr>
-            }
-        </table>
+        <div id="dataContainer">
+            <!-- The fetched partial view will be inserted here -->
+            @await Html.PartialAsync("_MovieDataPartial", ViewData["movies"])
+        </div>
     </div>
-    <div class="pagination">
-        <a onclick="processPaging(this)" href="javascript:void(0);" name="paging" data="first">&laquo;&laquo;</a>
-        <a onclick="processPaging(this)" href="javascript:void(0);" name="paging" data="backward">&laquo;</a>
-        <a onclick="processPaging(this)" href="javascript:void(0);" name="paging" data="1" class="active">1</a>
-        @for (int i = 2; i < (int)ViewData["pages"] + 2; i++)
-        {
-            <a onclick="processPaging(this)" href="javascript:void(0);" name="paging" data="@i">@i</a>
-        }
-        <a onclick="processPaging(this)" href="javascript:void(0);" name="paging" data="forward">&raquo;</a>
-        <a onclick="processPaging(this)" href="javascript:void(0);" name="paging" data="last">&raquo;&raquo;</a>
+    <div id="update-modal" class="modal">
+        <!-- Modal content -->
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Update</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div>
+                    <p class="update-label">ID: </p> <input class="inline" id="update-id" disabled />
+                </div>
+                <div>
+                    <p class="update-label">Name: </p> <input class="inline" id="update-name" />
+                </div>
+                <div>
+                    <p class="update-label">Description: </p> <input class="inline" id="update-description" />
+                </div>
+                <div>
+                    <p class="update-label">Actor: </p> <input class="inline" id="update-actor" />
+                </div>
+                <div>
+                    <p class="update-label">Rating: </p> <input class="inline" id="update-rating" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" id="btn-cancel">Cancel</button>
+                <button class="btn" id="btn-update">Update</button>
+            </div>
+        </div>
+
     </div>
 </body>
 </html>

@@ -2,21 +2,56 @@
     For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 *@
 @{
+    
 }
 @model List<Movie>
 
-<table>
+
+<table id="movie-table">
     <tr>
-        <th>Id</th>
+        <th><input type="checkbox" id="checkbox-all"></th>
+        <th>ID</th>
         <th>Name</th>
-        <!-- Add more columns as needed -->
+        <th>Path</th>
+        <th>Description</th>
+        <th>Actor</th>
+        <th>Width</th>
+        <th>Height</th>
+        <th>ContentType</th>
+        <th>Rating</th>
+        <th>TotalBitrate</th>
+        <th>EncodingBitrate</th>
+        <th>Size</th>
+        <th>Deleted</th>
+        <th>AccessTime</th>
+        <th>Options</th>
     </tr>
     @foreach (var movie in Model)
     {
         <tr>
-            <td>@movie.Id</td>
-            <td>@movie.Name</td>
-            <!-- Render other movie properties -->
+            <th><input type="checkbox" name="table-checkbox"></th>
+            <th>@movie.Id</th>
+            <th>@movie.Name</th>
+            <th>@movie.Path</th>
+            <th>@movie.Description</th>
+            <th>@movie.Actor</th>
+            <th>@movie.FrameWidth</th>
+            <th>@movie.FrameHeight</th>
+            <th>@movie.ContentType</th>
+            <th>@movie.Rating</th>
+            <th>@movie.TotalBitrate</th>
+            <th>@movie.EncodingBitrate</th>
+            <th>@movie.Size</th>
+            <th>@movie.IsDeleted</th>
+            <th>@movie.AcessTime</th>
+            <th>
+                <select name="options" id="options-@movie.Id" onchange="processOption(event)" class="select">
+                    <option value="none">--options--</option>
+                    <option value="open">open</option>
+                    <option value="edit">edit</option>
+                    <option value="delete">delete</option>
+                </select>
+            </th>
         </tr>
     }
 </table>
