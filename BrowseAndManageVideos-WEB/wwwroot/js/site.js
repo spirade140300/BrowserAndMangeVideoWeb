@@ -2,7 +2,9 @@
     document.getElementById("btn-search").onclick = async function () { search() };
     //document.getElementById("btn-open-file").onclick = function () { openFileInDirectory() };
     document.getElementById("checkbox-all").onclick = function () { checkAll() };
+    document.getElementById("btn-update-detail").onclick = function () { updateDetail() };
     resizableGrid(document.getElementById("movie-table"));
+    
 }
 
 async function search() {
@@ -42,6 +44,30 @@ function checkAll() {
             checkboxes[i].checked = true;
         }
     }
+}
+
+function updateDetail() {
+    fetch(`https://localhost:44378/Movie/Search/${param}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+    })
+        .then(response => {
+            if (response.ok) {
+                return response.text(); // Extract the response data as text
+            } else {
+                throw new Error('An error occurred while fetching the movie data.');
+            }
+        })
+        .then(data => {
+            // Update the container element with the fetched partial view
+            document.getElementById('movie-table').innerHTML = data;
+            console.log('Movie data successfully updated on the page.');
+        })
+        .catch(error => {
+            console.error('An error occurred:', error);
+        });
 }
 
 async function toggleUpdateModal(id) {
